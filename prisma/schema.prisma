@@ -1,0 +1,132 @@
+// ============================================================
+// Prisma Schema — Shared Multi-Platform Database
+// ============================================================
+// This database is platform-agnostic. WhatsApp, Instagram,
+// TikTok, etc. all write into the same tables.
+// The "platform" field tells you where each record came from.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// -----------------------------------------------------------
+// CONTACTS — Every person who messages you, on any platform
+// -----------------------------------------------------------
+model Contact {
+  id        String   @id @default(uuid())
+  name      String?  // Their display name (if known)
+  phone     String?  // Phone number (WhatsApp)
+  email     String?  // Email (if gathered)
+
+  // Which platform did they come from?
+  platform   String  // "whatsapp" | "instagram" | "tiktok" | etc.
+  platformId String  // Their ID on that platform (e.g. WhatsApp phone, IG user ID)
+
+  // --- Client Intelligence ---
+  // Info extracted by AI from your chat history with them:
+  //   e.g. "Wants logo design, budget ~$200, prefers minimalist style"
+  chatGatheredInfo String? // AI-summarized insights from conversations
+
+  // Info from legally available public sources (social media bios, etc.):
+  //   e.g. "Runs a bakery in Riyadh, 5K followers on IG, website: example.com"
+  publicInfo String? // Publicly available info about this person
+
+  // Flexible JSON for anything else platform-specific
+  metadata  String?  // JSON string for extra platform-specific data
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  conversations Conversation[]
+  orders        Order[]
+
+  @@unique([platform, platformId]) // One record per person per platform
+}
+
+// -----------------------------------------------------------
+// CONVERSATIONS — A thread of messages with a contact
+// -----------------------------------------------------------
+model Conversation {
+  id        String   @id @default(uuid())
+
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id])
+
+  platform       String  // "whatsapp" | "instagram" | etc.
+  platformChatId String  // The platform's native chat/thread ID
+
+  status    String   @default("active") // "active" | "paused" | "closed"
+
+  metadata  String?  // JSON string for extra data
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  messages Message[]
+  orders   Order[]
+
+  @@unique([platform, platformChatId])
+}
+
+// -----------------------------------------------------------
+// MESSAGES — Every individual message sent or received
+// -----------------------------------------------------------
+model Message {
+  id        String   @id @default(uuid())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+
+  role    String  // "user" (they sent it) | "assistant" (AI replied)
+  content String  // The actual message text
+
+  platformMessageId String?  // The platform's native message ID
+  messageType       String   @default("text") // "text" | "image" | "audio" | etc.
+
+  metadata  String?  // JSON string for extra data (e.g. media URLs)
+
+  createdAt DateTime @default(now())
+}
+
+// -----------------------------------------------------------
+// ORDERS — Client order/project tracking
+// -----------------------------------------------------------
+// Tracks what each client wants, the status of their order,
+// pricing, and any notes. Linked to both the contact AND
+// the conversation where the order was discussed.
+// -----------------------------------------------------------
+model Order {
+  id        String   @id @default(uuid())
+
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id])
+
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
+
+  // --- Order Details ---
+  title       String   // Short name: "Logo Design", "Website Redesign"
+  description String?  // Detailed description of what the client wants
+  status      String   @default("inquiry")
+  // Statuses: "inquiry" → "quoted" → "accepted" → "in_progress"
+  //         → "delivered" → "completed" | "cancelled" | "disputed"
+
+  // --- Pricing ---
+  price    Float?   // Agreed price (null if not yet quoted)
+  currency String?  // "USD", "SAR", "EUR", etc.
+
+  // --- Notes ---
+  notes    String?  // Your internal notes about this order
+  details  String?  // JSON string for flexible extra order data
+  //   e.g. deadlines, deliverable links, revision count, etc.
+
+  platform String   // Which platform this order came through
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
