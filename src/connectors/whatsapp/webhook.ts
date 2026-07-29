@@ -24,7 +24,7 @@ whatsappRouter.get("/", (req: Request, res: Response) => {
     req.query.challenge ||
     "VERIFIED") as string;
 
-  console.log("✅ WhatsApp webhook verified — returning challenge:", challenge);
+  console.log("✅ Meta Webhook verification request received, returning challenge:", challenge);
   res.status(200).send(challenge);
 });
 
