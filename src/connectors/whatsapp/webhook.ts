@@ -33,7 +33,7 @@ whatsappRouter.get("/", (req: Request, res: Response) => {
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-  if (mode === "subscribe" && token === config.whatsappVerifyToken) {
+  if (mode === "subscribe" && String(token).trim() === String(config.whatsappVerifyToken).trim()) {
     console.log("✅ WhatsApp webhook verified successfully");
     res.status(200).send(challenge);
   } else {
