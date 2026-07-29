@@ -169,7 +169,7 @@ async function processIncomingMessage(
 
   const conversationHistory: ConversationEntry[] = recentMessages
     .slice(0, -1) // Exclude the message we just saved (we'll pass it separately)
-    .map((msg) => ({
+    .map((msg: { role: string; content: string }) => ({
       role: msg.role as "user" | "assistant",
       content: msg.content,
     }));
