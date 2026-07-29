@@ -13,9 +13,26 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// -----------------------------------------------------------
+// Privacy policy page for Meta verification
+app.get("/privacy", (_req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html>
+      <head><title>Privacy Policy - KH Auto Reply Bot</title></head>
+      <body style="font-family: sans-serif; padding: 40px; max-width: 800px; margin: 0 auto;">
+        <h1>Privacy Policy for KH Auto Reply Bot</h1>
+        <p>Last updated: July 2026</p>
+        <p>KH Auto Reply Bot uses the WhatsApp Cloud API to process incoming customer messages and provide automated AI assistance.</p>
+        <h2>Data Collection & Usage</h2>
+        <p>We process incoming message text strictly to generate automated responses and store conversation history to improve service quality. We do not sell or share personal data with third parties.</p>
+        <h2>Contact Us</h2>
+        <p>If you have any questions about this Privacy Policy, please contact us via email.</p>
+      </body>
+    </html>
+  `);
+});
+
 // Health check endpoint
-// -----------------------------------------------------------
 app.get("/", (_req, res) => {
   res.json({
     status: "running",
