@@ -4,7 +4,7 @@
   "description": "AI-powered multi-platform auto-reply system — WhatsApp first",
   "main": "dist/server.js",
   "scripts": {
-    "build": "prisma generate && prisma db push && tsc",
+    "build": "prisma generate && tsc",
     "start": "node dist/server.js",
     "dev": "tsx src/server.ts",
     "db:generate": "prisma generate",

@@ -1,24 +1,21 @@
 // ============================================================
 // Database Client — Shared Prisma instance (Prisma 7+)
 // ============================================================
-// Every part of the app imports the database client from here.
-// This ensures we only have ONE connection to the database.
-//
-// Prisma 7 requires a "driver adapter" for direct database
-// connections. We use @prisma/adapter-libsql for SQLite.
-// ============================================================
 
 import path from "node:path";
+import fs from "node:fs";
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
 
-// Point to the SQLite database file
-const dbPath = path.join(__dirname, "..", "..", "prisma", "dev.db");
+// Ensure the prisma directory exists
+const prismaDir = path.join(__dirname, "..", "..", "prisma");
+if (!fs.existsSync(prismaDir)) {
+  fs.mkdirSync(prismaDir, { recursive: true });
+}
 
-// Create the Prisma adapter with the SQLite connection config
+const dbPath = path.join(prismaDir, "dev.db");
 const adapter = new PrismaLibSql({ url: `file:${dbPath}` });
 
-// Create the Prisma client with the adapter
 export const db = new PrismaClient({ adapter });
 
 /**
@@ -29,15 +26,18 @@ export async function connectDatabase(): Promise<void> {
     await db.$connect();
     console.log("✅ Database connected successfully");
   } catch (error) {
-    console.error("❌ Failed to connect to database:", error);
-    process.exit(1);
+    console.error("❌ Database connection error (non-fatal):", error);
   }
 }
 
 /**
- * Disconnect from the database. Call this when the server shuts down.
+ * Disconnect from the database.
  */
 export async function disconnectDatabase(): Promise<void> {
-  await db.$disconnect();
-  console.log("📦 Database disconnected");
+  try {
+    await db.$disconnect();
+    console.log("📦 Database disconnected");
+  } catch {
+    // Ignore error on shutdown
+  }
 }
