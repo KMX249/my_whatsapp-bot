@@ -35,10 +35,15 @@ whatsappRouter.post("/", async (req: Request, res: Response) => {
   // Always respond 200 quickly so Meta knows we received it
   res.sendStatus(200);
 
+  console.log("📩 Webhook POST received:", JSON.stringify(req.body, null, 2));
+
   try {
     const payload = req.body as WhatsAppWebhookPayload;
 
-    if (payload.object !== "whatsapp_business_account") return;
+    if (!payload || !payload.entry) {
+      console.log("⚠️ Received empty or malformed payload");
+      return;
+    }
 
     for (const entry of payload.entry) {
       for (const change of entry.changes) {
