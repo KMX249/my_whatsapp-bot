@@ -38,12 +38,21 @@ app.get("/", (_req, res) => {
 });
 
 // -----------------------------------------------------------
-// Mount platform connectors
+// Direct GET verification route for Meta WhatsApp Webhook
 // -----------------------------------------------------------
-// Each platform gets its own URL path:
-//   /webhook/whatsapp  — WhatsApp messages arrive here
-//   /webhook/instagram — (future) Instagram messages
-//   /webhook/tiktok    — (future) TikTok messages
+app.get("/webhook/whatsapp", (req, res) => {
+  const hubObj = (req.query.hub as Record<string, unknown>) || {};
+  const challenge = (req.query["hub.challenge"] ||
+    hubObj.challenge ||
+    req.query.challenge ||
+    "VERIFIED") as string;
+
+  console.log("✅ Webhook verified — challenge:", challenge);
+  res.status(200).send(challenge);
+});
+
+// -----------------------------------------------------------
+// Mount platform connectors
 // -----------------------------------------------------------
 app.use("/webhook/whatsapp", whatsappRouter);
 
