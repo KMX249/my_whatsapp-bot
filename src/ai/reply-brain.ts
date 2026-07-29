@@ -81,34 +81,56 @@ export async function generateReply(
   newMessage: string,
   existingClientInfo?: string
 ): Promise<AIReply> {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
   const systemPrompt = buildSystemPrompt(
     config.aiSystemPrompt,
     existingClientInfo
   );
 
-  // Build the chat history for Gemini
   const chatHistory = conversationHistory.map((entry) => ({
     role: entry.role === "user" ? ("user" as const) : ("model" as const),
     parts: [{ text: entry.content }],
   }));
 
-  const chat = model.startChat({
-    history: chatHistory,
-    systemInstruction: { role: "user", parts: [{ text: systemPrompt }] },
-  });
+  // List of models to try in order (if primary hits 429 rate limit, try fallback)
+  const modelsToTry = [
+    "gemini-2.5-flash",
+    "gemini-1.5-flash",
+    "gemini-2.0-flash-lite",
+  ];
 
-  const result = await chat.sendMessage(newMessage);
-  const responseText = result.response.text().trim();
+  let responseText = "";
+
+  for (const modelName of modelsToTry) {
+    try {
+      console.log(`🤖 Requesting reply using model: ${modelName}...`);
+      const model = genAI.getGenerativeModel({ model: modelName });
+      const chat = model.startChat({
+        history: chatHistory,
+        systemInstruction: { role: "user", parts: [{ text: systemPrompt }] },
+      });
+
+      const result = await chat.sendMessage(newMessage);
+      responseText = result.response.text().trim();
+      if (responseText) break; // Success!
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.warn(`⚠️ Model ${modelName} failed (${errMsg}). Trying next...`);
+    }
+  }
+
+  // Fallback if all AI models fail or hit rate limits
+  if (!responseText) {
+    console.error("❌ All AI models failed. Using default polite reply.");
+    return {
+      content:
+        "Thank you for contacting KH Tech! Khalid has received your message and will follow up with you shortly.",
+    };
+  }
 
   // Parse the JSON response from the AI
   try {
-    // Try to extract JSON from the response (handle cases where AI wraps in code fences)
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      // AI didn't follow the JSON format — just use raw text as reply
-      console.warn("⚠️  AI didn't return JSON format, using raw response");
       return { content: responseText };
     }
 
@@ -119,8 +141,6 @@ export async function generateReply(
       detectedOrder: parsed.detectedOrder || undefined,
     };
   } catch {
-    // JSON parsing failed — just use the raw text
-    console.warn("⚠️  Failed to parse AI JSON response, using raw text");
     return { content: responseText };
   }
 }
