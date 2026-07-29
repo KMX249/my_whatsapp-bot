@@ -1,15 +1,6 @@
 // ============================================================
 // Main Server — Entry Point
 // ============================================================
-// This is the starting point of the entire application.
-// It sets up the web server and mounts platform connectors.
-//
-// To add a new platform later (e.g. Instagram), you just:
-//   1. Create src/connectors/instagram/webhook.ts
-//   2. Import it here
-//   3. Mount it: app.use("/webhook/instagram", instagramRouter)
-//   That's it — database and AI brain are already shared.
-// ============================================================
 
 import express from "express";
 import { config } from "./config";
@@ -18,11 +9,12 @@ import { whatsappRouter } from "./connectors/whatsapp/webhook";
 
 const app = express();
 
-// Parse incoming JSON (Meta sends webhook data as JSON)
+// Parse incoming JSON payloads
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // -----------------------------------------------------------
-// Health check endpoint — useful for hosting platforms
+// Health check endpoint
 // -----------------------------------------------------------
 app.get("/", (_req, res) => {
   res.json({
@@ -38,29 +30,24 @@ app.get("/", (_req, res) => {
 });
 
 // -----------------------------------------------------------
-// Direct GET verification route for Meta WhatsApp Webhook
+// WhatsApp Webhook endpoint — handles both GET verification & POST messages
 // -----------------------------------------------------------
 app.get("/webhook/whatsapp", (req, res) => {
-  const hubObj = (req.query.hub as Record<string, unknown>) || {};
   const challenge = (req.query["hub.challenge"] ||
-    hubObj.challenge ||
+    (req.query.hub as Record<string, unknown>)?.challenge ||
     req.query.challenge ||
     "VERIFIED") as string;
 
-  console.log("✅ Webhook verified — challenge:", challenge);
+  console.log("✅ Webhook GET request received, challenge:", challenge);
   res.status(200).send(challenge);
 });
 
-// -----------------------------------------------------------
-// Mount platform connectors
-// -----------------------------------------------------------
 app.use("/webhook/whatsapp", whatsappRouter);
 
 // -----------------------------------------------------------
 // Start the server
 // -----------------------------------------------------------
 async function start(): Promise<void> {
-  // Connect to database first
   await connectDatabase();
 
   app.listen(config.port, () => {
