@@ -29,9 +29,10 @@ export const whatsappRouter = Router();
 // matches what we set, and echo back the challenge.
 // -----------------------------------------------------------
 whatsappRouter.get("/", (req: Request, res: Response) => {
-  const mode = req.query["hub.mode"];
-  const token = req.query["hub.verify_token"];
-  const challenge = req.query["hub.challenge"];
+  const hubObj = (req.query.hub as Record<string, unknown>) || {};
+  const mode = (req.query["hub.mode"] || hubObj.mode) as string | undefined;
+  const token = (req.query["hub.verify_token"] || hubObj.verify_token) as string | undefined;
+  const challenge = (req.query["hub.challenge"] || hubObj.challenge) as string | undefined;
 
   const tokenStr = String(token || "").trim();
   const expectedStr = String(config.whatsappVerifyToken || "").trim();
